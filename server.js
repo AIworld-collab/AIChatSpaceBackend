@@ -1,7 +1,9 @@
 // backend/server.js
+
 const express = require('express');
 const cors = require('cors');
 const bodyParser = require('body-parser');
+const OpenAI = require('openai');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -9,21 +11,27 @@ const PORT = process.env.PORT || 3000;
 app.use(cors());
 app.use(bodyParser.json());
 
-app.post('/api/chat', async (req, res) => {
+// OpenAI setup
+const openai = new OpenAI({
+  apiKey: process.env.OPENAI_API_KEY
+});
+
+// Chat endpoint
+app.post('/chat', async (req, res) => {
   const { message } = req.body;
 
-  if (!message) {
-    return res.status(400).json({ error: 'No message provided' });
-  }
-
   try {
-    // Example: simple echo response
-    await new Promise(r => setTimeout(r, 800)); // simulate AI thinking
-    const reply = `You said: ${message}`;
-    res.json({ reply, imageUrl: null });
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: 'Server error' });
+    const completion = await openai.chat.completions.create({
+      model: "gpt-4.1-mini",
+      messages: [{ role: "user", content: message }]
+    });
+
+    const reply = completion.choices[0].message.content;
+    res.json({ reply });
+
+  } catch (error) {
+    console.error(error);
+    res.json({ reply: "Bot: Something went wrong!" });
   }
 });
 
