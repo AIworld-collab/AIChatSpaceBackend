@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AI Chat Space</title>
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@700&display=swap" rel="stylesheet">
+<style>
+body {
+  font-family: 'Nunito', sans-serif;
+  font-weight: 700;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  background: linear-gradient(to bottom, #e0f7fa, #ffffff);
+  color: #333;
+}
+
+h1 {
+  text-align: center;
+  margin: 16px 0;
+  font-size: 44px;
+  color: #00796b;
+}
+
+#chat-container {
+  flex: 1;
+  padding: 16px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.message {
+  max-width: 70%;
+  padding: 14px 20px;
+  border-radius: 20px;
+  word-wrap: break-word;
+  line-height: 1.5;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.15);
+  opacity: 0;
+  transform: translateY(20px);
+  animation: fadeInUp 0.3s forwards;
+}
+
+.message.user { align-self: flex-end; background-color: #00796b; color: white; border-bottom-right-radius: 0;}
+.message.bot { align-self: flex-start; background-color: #ffffff; color: #333; border-bottom-left-radius: 0;}
+
+.timestamp { font-size: 12px; color: #888; margin-top: 4px; text-align: right;}
+
+#input-bar { display: flex; padding: 16px; background-color: #f7f7f7; border-top: 1px solid #ddd;}
+#user-input { flex: 1; padding: 14px 18px; font-size: 18px; border: 1px solid #ccc; border-radius: 28px; outline: none; background: #fff; font-weight: bold;}
+#send-btn { margin-left: 12px; padding: 0 20px; font-size: 22px; background-color: #00796b; color: white; border: none; border-radius: 50%; cursor: pointer;}
+#send-btn:hover { background-color: #004d40; transform: scale(1.05); }
+
+@keyframes fadeInUp { 0% { opacity:0; transform:translateY(20px);} 100% { opacity:1; transform:translateY(0);} }
+</style>
+</head>
+<body>
+
+<h1>AI Chat Space</h1>
+
+<div id="chat-container"></div>
+
+<div id="input-bar">
+  <input type="text" id="user-input" placeholder="Type your message...">
+  <button id="send-btn">↑</button>
+</div>
+
+<script>
+const chatContainer = document.getElementById('chat-container');
+const inputField = document.getElementById('user-input');
+const sendBtn = document.getElementById('send-btn');
+
+// Add message
+const addMessage = (text,sender='bot') => {
+  const div=document.createElement('div');
+  div.classList.add('message',sender);
+  div.innerHTML = text;
+  const ts=document.createElement('div');
+  ts.classList.add('timestamp');
+  const d = new Date(); ts.textContent=`${sender==='bot'?'Bot':'You'} • ${d.getHours()}:${d.getMinutes()}`;
+  div.appendChild(ts);
+  chatContainer.appendChild(div);
+  chatContainer.scrollTop = chatContainer.scrollHeight;
+}
+
+// Send message
+const handleMessage = async () => {
+  const msg = inputField.value.trim();
+  if(!msg) return;
+  addMessage(msg,'user');
+  inputField.value='';
+  inputField.disabled=true;
+  sendBtn.disabled=true;
+
+  // Typing indicator
+  const typing = document.createElement('div');
+  typing.classList.add('message','bot'); typing.textContent='Typing...';
+  chatContainer.appendChild(typing);
+  chatContainer.scrollTop=chatContainer.scrollHeight;
+
+  try {
+    const res = await fetch('http://localhost:3000/api/chat',{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({message: msg})
+    });
+    const data = await res.json();
+    chatContainer.removeChild(typing);
+    addMessage(data.reply,'bot');
+  } catch {
+    chatContainer.removeChild(typing);
+    addMessage('Bot: Something went wrong!','bot');
+  } finally {
+    inputField.disabled=false;
+    sendBtn.disabled=false;
+    inputField.focus();
+  }
+}
+
+sendBtn.addEventListener('click',handleMessage);
+inputField.addEventListener('keypress', e=>{if(e.key==='Enter') handleMessage();});
+
+// Initial welcome message
+window.addEventListener('load',()=>addMessage('Hello! Welcome to AI Chat Space 😊','bot'));
+</script>
+
+</body>
+</html>
